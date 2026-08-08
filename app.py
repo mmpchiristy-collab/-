@@ -6,8 +6,8 @@ st.set_page_config(page_title="எரிபொருள் நிலைய ம�
 
 st.title("⛽ எரிபொருள் நிலைய மேலாண்மை")
 
-# 1. Session State Initialization (தரவுகளைச் சேமிக்க)
-if "stock_data" not in st.values:
+# 1. Session State Initialization
+if "stock_data" not in st.session_state:
     st.session_state["stock_data"] = pd.DataFrame({
         "எரிபொருள்": ["Petrol", "Diesel", "Kerosene"],
         "விலை/லிட்டர் (Rs)": [310.0, 280.0, 230.0],
@@ -23,13 +23,13 @@ if "sales_history" not in st.session_state:
 # ----------------------------------------------------
 # 1. நேரடி அட்டவணை திருத்தம் (Interactive Table)
 # ----------------------------------------------------
-st.subheader("📊 கையிருப்பு & விலை விவரம் (நேரடியாக மாற்றலாம்)")
-st.info("💡 கீழே உள்ள அட்டவணையில் உள்ள எண்களை நேரடியாகக் கிளிக் செய்து மாற்றிக் கொள்ளலாம்!")
+st.subheader("📊 கையிருப்பு & விலை விவரம்")
+st.info("💡 அட்டவணையில் உள்ள எண்களை நேரடியாகத் தொட்டு மாற்றலாம்!")
 
 # நேரடி அட்டவணை எடிட்டர்
 edited_df = st.data_editor(
     st.session_state["stock_data"],
-    num_rows="dynamic", # புதிய வரிசைகளைச் சேர்க்கும் வசதி
+    num_rows="dynamic",
     use_container_width=True,
     key="editor"
 )
@@ -38,7 +38,7 @@ edited_df = st.data_editor(
 st.session_state["stock_data"] = edited_df
 
 # GST வரி மாற்றம்
-with st.expander("⚙️ GST வரியை மாற்ற"):
+with st.expander("⚙️ GST வரியை மாற்றி அமைக்க"):
     new_gst = st.number_input("GST சதவிகிதம் (%)", value=float(st.session_state["gst_rate"]), step=0.5)
     st.session_state["gst_rate"] = new_gst
 
@@ -49,7 +49,7 @@ st.markdown("---")
 # ----------------------------------------------------
 st.subheader("💳 புதிய பில்லிங் செய்ய")
 
-fuel_options = st.session_state["stock_data"]["எரிபொருள்"].tolist()
+fuel_options = st.session_state["stock_data"]["எரிபொருள்"].dropna().tolist()
 
 with st.form("billing_form"):
     selected_fuel = st.selectbox("எரிபொருள் வகையைத் தேர்ந்தெடுக்கவும்", fuel_options)
