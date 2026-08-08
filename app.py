@@ -28,8 +28,10 @@ def init_db():
             date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
+    # Petrol, Diesel & Kerosene (மண்ணெண்ணெய்)
     cursor.execute("INSERT OR IGNORE INTO stock VALUES ('Petrol', 310.0, 5000.0)")
     cursor.execute("INSERT OR IGNORE INTO stock VALUES ('Diesel', 280.0, 5000.0)")
+    cursor.execute("INSERT OR IGNORE INTO stock VALUES ('Kerosene', 230.0, 5000.0)")
     conn.commit()
     conn.close()
 
@@ -47,7 +49,7 @@ st.dataframe(stock_df, use_container_width=True)
 # 2. Billing Section
 st.subheader("💳 புதிய பில்லிங் செய்ய")
 with st.form("billing_form"):
-    fuel_type = st.selectbox("எரிபொருள் வகையைத் தேர்ந்தெடுக்கவும்", ["Petrol", "Diesel"])
+    fuel_type = st.selectbox("எரிபொருள் வகையைத் தேர்ந்தெடுக்கவும்", ["Petrol", "Diesel", "Kerosene"])
     total_amount = st.number_input("மொத்த தொகை (LKR - GST உட்பட)", min_value=1.0, step=50.0)
     
     submitted = st.form_submit_button("பில் சேமிக்கவும்")
@@ -55,32 +57,36 @@ with st.form("billing_form"):
 if submitted:
     cursor = conn.cursor()
     cursor.execute("SELECT price_per_liter, available_liters FROM stock WHERE fuel_type=?", (fuel_type,))
-    price, stock = cursor.fetchone()
+    result = cursor.fetchone()
 
-    liters_needed = total_amount / price
-
-    if liters_needed > stock:
-        st.error("⚠️ போதிய கையிருப்பு இல்லை!")
+    if result is None:
+        st.error("⚠️ தேர்வு செய்யப்பட்ட எரிபொருள் தரவுத்தளத்தில் இல்லை!")
     else:
-        gst_rate = 0.05
-        base_amount = total_amount / (1 + gst_rate)
-        gst_amount = total_amount - base_amount
-        new_stock = stock - liters_needed
+        price, stock = result
+        liters_needed = total_amount / price
 
-        cursor.execute("UPDATE stock SET available_liters=? WHERE fuel_type=?", (new_stock, fuel_type))
-        cursor.execute(
-            "INSERT INTO sales (fuel_type, liters, base_amount, gst_amount, total_amount) VALUES (?, ?, ?, ?, ?)",
-            (fuel_type, liters_needed, base_amount, gst_amount, total_amount)
-        )
-        conn.commit()
+        if liters_needed > stock:
+            st.error("⚠️ போதிய கையிருப்பு இல்லை!")
+        else:
+            gst_rate = 0.05
+            base_amount = total_amount / (1 + gst_rate)
+            gst_amount = total_amount - base_amount
+            new_stock = stock - liters_needed
 
-        st.success(f"✅ பில் வெற்றிகரமாகப் பதிவானது!\n\n"
-                   f"• எரிபொருள்: {fuel_type}\n"
-                   f"• அளவு: {liters_needed:.2f} L\n"
-                   f"• அடிப்படைத் தொகை: Rs.{base_amount:.2f}\n"
-                   f"• GST (5%): Rs.{gst_amount:.2f}\n"
-                   f"• மொத்த தொகை: Rs.{total_amount:.2f}")
-        st.rerun()
+            cursor.execute("UPDATE stock SET available_liters=? WHERE fuel_type=?", (new_stock, fuel_type))
+            cursor.execute(
+                "INSERT INTO sales (fuel_type, liters, base_amount, gst_amount, total_amount) VALUES (?, ?, ?, ?, ?)",
+                (fuel_type, liters_needed, base_amount, gst_amount, total_amount)
+            )
+            conn.commit()
+
+            st.success(f"✅ பில் வெற்றிகரமாகப் பதிவானது!\n\n"
+                       f"• எரிபொருள்: {fuel_type}\n"
+                       f"• அளவு: {liters_needed:.2f} L\n"
+                       f"• அடிப்படைத் தொகை: Rs.{base_amount:.2f}\n"
+                       f"• GST (5%): Rs.{gst_amount:.2f}\n"
+                       f"• மொத்த தொகை: Rs.{total_amount:.2f}")
+            st.rerun()
 
 # 3. Report Section
 st.subheader("📥 விற்பனை அறிக்கை (Excel)")
